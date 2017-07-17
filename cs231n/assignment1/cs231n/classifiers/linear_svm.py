@@ -41,11 +41,9 @@ def svm_loss_naive(W, X, y, reg):
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
-  dW /= num_train
-  dW += (2*reg/num_train)*W
 
   # Add regularization to the loss.
-  loss += reg * np.sum(W * W)
+  loss += 0.5 * reg * np.sum(W * W)
 
   #############################################################################
   # TODO:                                                                     #
@@ -55,7 +53,8 @@ def svm_loss_naive(W, X, y, reg):
   # loss is being computed. As a result you may need to modify some of the    #
   # code above to compute the gradient.                                       #
   #############################################################################
-
+  dW /= num_train
+  dW += reg*W
 
   return loss, dW
 
@@ -72,10 +71,10 @@ def svm_loss_vectorized(W, X, y, reg):
   num_train = X.shape[0]
   XW = np.matmul(X,W)
   losses = np.maximum(XW - np.choose(y, XW.T).reshape(num_train,1) + 1, 0)
-  loss = (np.sum(losses) - num_train)/num_train + reg*np.sum(W*W)
+  loss = (np.sum(losses) - num_train)/num_train + 0.5*reg*np.sum(W*W)
   grad_contrib = (losses > 0)*1
   grad_contrib[np.arange(grad_contrib.shape[0]), y] = -1*(np.sum(grad_contrib, axis=1)-1)
-  dW = (np.matmul(X.T,grad_contrib) + 2*reg*W)/num_train  
+  dW = np.matmul(X.T,grad_contrib)/num_train + reg*W
 
   #############################################################################
   # TODO:                                                                     #
