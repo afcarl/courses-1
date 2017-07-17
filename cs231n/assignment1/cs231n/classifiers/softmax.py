@@ -37,11 +37,10 @@ def softmax_loss_naive(W, X, y, reg):
             else:
                 grad = normalized_probs[j]*X[i]
                 dW[:,j] += grad.T
-  loss += 0.5*reg*np.sum(W*W)
   loss /= num_train
-  dW += reg*W
+  loss += reg*np.sum(W*W)
   dW /= num_train
-
+  dW += 2*reg*W
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using explicit loops.     #
   # Store the loss in loss and the gradient in dW. If you are not careful     #
@@ -67,10 +66,10 @@ def softmax_loss_vectorized(W, X, y, reg):
   unnormalized_probs = np.e**np.matmul(X,W)
   sum_unnormalized_probs = np.sum(unnormalized_probs, axis = 1).reshape(num_train,1)
   normalized_probs = unnormalized_probs/sum_unnormalized_probs
-  loss = (np.sum(-1*np.log(np.choose(y, normalized_probs.T))) + reg*np.sum(W*W))/num_train
+  loss = np.sum(-1*np.log(np.choose(y, normalized_probs.T)))/num_train + reg*np.sum(W*W)
   grads = normalized_probs
   grads[np.arange(grads.shape[0]), y] -=1
-  dW = (np.matmul(X.T,grads)+reg*W)/num_train
+  dW = np.matmul(X.T,grads)/num_train+2*reg*W
 
   #############################################################################
   # TODO: Compute the softmax loss and its gradient using no explicit loops.  #
