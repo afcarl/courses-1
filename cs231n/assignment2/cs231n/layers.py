@@ -439,6 +439,21 @@ def conv_forward_naive(x, w, b, conv_param):
     # Hint: you can use the function np.pad for padding.                      #
     ###########################################################################
     pass
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    [N,C,H,W] = np.shape(x)
+    [F,C,HH,WW] = np.shape(w)
+    H1 = int(1 + (H + 2 * pad - HH) / stride)
+    W1 = int(1 + (W + 2 * pad - WW) / stride)
+    x_padded = np.pad(x,((0,0),(0,0),(pad,pad),(pad,pad)),'constant')
+    out = np.zeros((N,F,H1,W1))
+    for n in range(N):
+        for ch in range(H1):
+            for cw in range(W1):
+                cx = x_padded[n,:,ch*stride:ch*stride+HH,cw*stride:cw*stride+WW] # N x C x HH x WW
+                for f in range(F):
+                    fw = w[f]
+                    out[n,f,ch,cw] = np.sum(cx*fw)+b[f]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -451,7 +466,7 @@ def conv_backward_naive(dout, cache):
     A naive implementation of the backward pass for a convolutional layer.
 
     Inputs:
-    - dout: Upstream derivatives.
+    - dout: Upstream derivatives. N x F x H1 x W1
     - cache: A tuple of (x, w, b, conv_param) as in conv_forward_naive
 
     Returns a tuple of:
@@ -460,10 +475,30 @@ def conv_backward_naive(dout, cache):
     - db: Gradient with respect to b
     """
     dx, dw, db = None, None, None
+    #db = dout
     ###########################################################################
     # TODO: Implement the convolutional backward pass.                        #
     ###########################################################################
     pass
+    x, w, b, conv_param = cache
+    pad = conv_param['pad']
+    stride = conv_param['stride']
+    [N,C,H,W] = np.shape(x)
+    [F,C,HH,WW] = np.shape(w)
+    H1 = int(1 + (H + 2 * pad - HH) / stride)
+    W1 = int(1 + (W + 2 * pad - WW) / stride)
+    x_padded = np.pad(x,((0,0),(0,0),(pad,pad),(pad,pad)),'constant')
+    dx = np.zeros_like(x_padded)
+    dw = np.zeros_like(w)
+    for n in range(N):
+        for ch in range(H1):
+            for cw in range(W1):
+                cx = x_padded[n,:,ch*stride:ch*stride+HH,cw*stride:cw*stride+WW] # N x C x HH x WW
+                for f in range(F):
+                    dw[f] += dout[n,f,ch,cw]*cx
+                    dx[n,:,ch*stride:ch*stride+HH,cw*stride:cw*stride+WW] += dout[n,f,ch,cw]*w[f]
+    dx = dx[:,:,pad:pad+H,pad:pad+W]
+    db = np.sum(dout, axis=(0, 2, 3))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -490,6 +525,18 @@ def max_pool_forward_naive(x, pool_param):
     # TODO: Implement the max pooling forward pass                            #
     ###########################################################################
     pass
+    stride = pool_param['stride']
+    HH = pool_param['pool_height']
+    WW = pool_param['pool_width']
+    [N,C,H,W] = np.shape(x)
+    H1 = int(1 + (H - HH) / stride)
+    W1 = int(1 + (W - WW) / stride)
+    out = np.zeros((N,C,H1,W1))
+    for n in range(N):
+        for ch in range(H1):
+            for cw in range(W1):
+                cx = x[n,:,ch*stride:ch*stride+HH,cw*stride:cw*stride+WW] # N x C x HH x WW
+                out[n,:,ch,cw] = np.amax(cx, axis=(1,2))
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -513,6 +560,22 @@ def max_pool_backward_naive(dout, cache):
     # TODO: Implement the max pooling backward pass                           #
     ###########################################################################
     pass
+    x, pool_param = cache
+    stride = pool_param['stride']
+    HH = pool_param['pool_height']
+    WW = pool_param['pool_width']
+    [N,C,H,W] = np.shape(x)
+    H1 = int(1 + (H - HH) / stride)
+    W1 = int(1 + (W - WW) / stride)
+    dx = np.zeros_like(x)
+    for n in range(N):
+        for ch in range(H1):
+            for cw in range(W1):
+                cx = x[n,:,ch*stride:ch*stride+HH,cw*stride:cw*stride+WW] # C x HH x WW
+                for cc in range(C):
+                    ccx = cx[cc]
+                    hi, wi =  np.unravel_index(np.argmax(ccx), np.shape(ccx)) # HH x WW
+                    dx[n,cc,ch*stride+hi,cw*stride+wi]+=dout[n,cc,ch,cw]
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -551,6 +614,11 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # be very short; ours is less than five lines.                            #
     ###########################################################################
     pass
+    N, C, H, W = x.shape
+    x = x.transpose(0,2,3,1)
+    x = x.reshape(-1,C)
+    out,cache = batchnorm_forward(x, gamma, beta, bn_param)
+    out = out.reshape(N, H, W, C ).transpose(0,3,1,2)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
@@ -581,6 +649,11 @@ def spatial_batchnorm_backward(dout, cache):
     # be very short; ours is less than five lines.                            #
     ###########################################################################
     pass
+    N, C, H, W = dout.shape
+    dout = dout.transpose(0,2,3,1)
+    dout = dout.reshape(-1,C)
+    dx, dgamma, dbeta = batchnorm_backward(dout, cache)
+    dx = dx.reshape(N, H, W, C ).transpose(0,3,1,2)
     ###########################################################################
     #                             END OF YOUR CODE                            #
     ###########################################################################
